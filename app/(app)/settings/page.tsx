@@ -57,8 +57,9 @@ export default function SettingsPage() {
 
   if (loading) return <div>Loading...</div>;
 
-  const periodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'N/A';
-  const tierDisplay = subscription?.tier.charAt(0).toUpperCase() + subscription?.tier.slice(1);
+   const periodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'N/A';
+   const tierDisplay = subscription?.tier ? subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1) : 'Unknown';
+
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
