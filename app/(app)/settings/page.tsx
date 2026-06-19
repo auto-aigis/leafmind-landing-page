@@ -100,15 +100,14 @@ export default function SettingsPage() {
               <p className="text-gray-900 font-medium">{periodEnd}</p>
             </div>
           )}
-          {subscription?.tier !== 'free' && (
-            <Button
-              as={Link}
-              href={process.env.NEXT_PUBLIC_PADDLE_PORTAL_URL || '#'}
-              className="mt-4"
-              target="_blank"
-            >
-              Manage Subscription
-            </Button>
+           {subscription?.tier !== 'free' && (
+             <Link href={process.env.NEXT_PUBLIC_PADDLE_PORTAL_URL || '#'} target="_blank">
+               <Button className="mt-4">
+                 Manage Subscription
+               </Button>
+             </Link>
+           )}
+
           )}
         </CardContent>
       </Card>
