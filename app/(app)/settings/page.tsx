@@ -107,8 +107,8 @@ export default function SettingsPage() {
                </Button>
              </Link>
            )}
+         </CardContent>
 
-          )}
         </CardContent>
       </Card>
 
