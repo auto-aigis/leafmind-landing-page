@@ -108,8 +108,8 @@ export default function SettingsPage() {
              </Link>
            )}
          </CardContent>
+       </Card>
 
-        </CardContent>
       </Card>
 
       <Card className="border-gray-200">
