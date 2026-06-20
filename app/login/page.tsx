@@ -1,92 +1,137 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { authApi } from "@/app/_lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [unverified, setUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setUnverified(false);
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Login failed');
-      }
-
-      const { token } = await res.json();
-      localStorage.setItem('supabase_token', token);
-      router.push('/dashboard');
+      await authApi.login(email, password);
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const message = err instanceof Error ? err.message : "Login failed";
+      if (message.includes("email_not_verified")) {
+        setUnverified(true);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    try {
+      await authApi.resendVerification(email);
+      setResendSent(true);
+      setTimeout(() => setResendSent(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white p-4">
       <Card className="w-full max-w-md border-gray-200">
         <CardHeader>
-          <CardTitle className="text-gray-900">Sign In</CardTitle>
+          <CardTitle className="text-2xl">Sign In</CardTitle>
+          <CardDescription>Enter your email and password</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</div>}
-            <div>
-              <Label htmlFor="email" className="text-gray-900">Email</Label>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {unverified && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertDescription className="text-yellow-800">
+                  Please verify your email first
+                </AlertDescription>
+              </Alert>
+            )}
+            {resendSent && (
+              <Alert className="border-green-200 bg-green-50">
+                <AlertDescription className="text-green-800">
+                  Verification email sent!
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border-gray-300 text-gray-900 placeholder:text-gray-500"
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="password" className="text-gray-900">Password</Label>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="border-gray-300 text-gray-900 placeholder:text-gray-500"
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+
+            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-           <p className="mt-4 text-center text-sm text-gray-600">
-             Don&apos;t have an account?{' '}
-             <Link href="/register" className="text-blue-600 hover:underline">
-               Sign up
-             </Link>
-           </p>
 
+          {unverified && (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+              >
+                {resendLoading ? "Sending..." : "Resend Verification Email"}
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-6 text-center text-sm">
+            Don't have an account?{" "}
+            <Link href="/register" className="text-green-600 hover:underline font-medium">
+              Sign up
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

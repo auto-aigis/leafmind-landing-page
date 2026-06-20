@@ -1,62 +1,44 @@
 "use client";
 
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { authApi } from '@/app/_lib/api';
-import * as types from '@/app/_lib/types';
+import { createContext, ReactNode, useEffect, useState, useCallback } from "react";
+import { authApi } from "@/app/_lib/api";
+import type { User } from "@/app/_lib/types";
 
-interface AuthContextType {
-  user: types.User | null;
+export interface AuthContextType {
+  user: User | null;
   loading: boolean;
-  token: string | null;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<types.User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const storedToken = localStorage.getItem('supabase_token');
-    if (!storedToken) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const userData = await authApi.me(storedToken);
-      setUser(userData);
-      setToken(storedToken);
+      const data = await authApi.me();
+      setUser(data);
     } catch {
-      localStorage.removeItem('supabase_token');
       setUser(null);
-      setToken(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+      setUser(null);
+    } catch {}
+  }, []);
+
   useEffect(() => {
-    refresh();
+    refresh().finally(() => setLoading(false));
   }, [refresh]);
 
-  const logout = useCallback(async () => {
-    if (token) {
-      try {
-        await authApi.logout(token);
-      } catch {}
-    }
-    localStorage.removeItem('supabase_token');
-    setUser(null);
-    setToken(null);
-  }, [token]);
-
   return (
-    <AuthContext.Provider value={{ user, loading, token, refresh, logout }}>
+    <AuthContext.Provider value={{ user, loading, refresh, logout }}>
       {children}
     </AuthContext.Provider>
   );

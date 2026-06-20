@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/app/_lib/hooks';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/app/_lib/hooks";
+import { Menu, X, LogOut } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -17,43 +17,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMobileOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
   if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-white text-gray-900">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   if (!user) {
-    router.push('/login');
     return null;
   }
 
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/pricing", label: "Billing" },
+    { href: "/settings", label: "Settings" },
+  ];
+
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.push("/login");
   };
-
-  const navItems = [
-    { label: 'Dashboard', href: '/dashboard' },
-    { label: 'Pricing', href: '/pricing' },
-    { label: 'Settings', href: '/settings' },
-  ];
 
   const isActive = (href: string) => pathname === href;
 
   return (
     <div className="flex h-screen bg-white">
-      <div className="hidden md:flex md:w-64 md:flex-col md:border-r md:border-gray-200">
-        <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200">
-          <h1 className="text-xl font-bold text-gray-900">LeafMind</h1>
+      <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-green-600">🌱 LeafMind</h1>
         </div>
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+        <nav className="flex-1 space-y-1 p-4">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`block px-4 py-2 rounded-lg text-sm font-medium transition ${
+              className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive(item.href)
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? "bg-gray-100 text-gray-900 font-medium"
+                  : "text-gray-700 hover:bg-gray-100"
               }`}
             >
               {item.label}
@@ -62,62 +67,62 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="border-t border-gray-200 p-4">
           <Button
+            variant="ghost"
+            className="w-full justify-start text-gray-700 hover:bg-gray-100"
             onClick={handleLogout}
-            variant="outline"
-            className="w-full text-gray-700 border-gray-300 hover:bg-gray-50"
           >
-            Logout
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
           </Button>
         </div>
-      </div>
+      </aside>
 
-      <div className="flex-1 flex flex-col md:ml-0">
-        <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-gray-200 bg-white">
-          <h1 className="text-lg font-bold text-gray-900">LeafMind</h1>
+      <div className="flex flex-1 flex-col">
+        <div className="md:hidden flex items-center justify-between h-14 border-b border-gray-200 bg-white px-4">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="text-gray-700 hover:text-gray-900"
+            className="text-gray-700 hover:bg-gray-100 p-2 rounded"
           >
-            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
+          <h1 className="text-lg font-bold text-green-600">🌱 LeafMind</h1>
+          <div className="w-10" />
         </div>
 
         {mobileOpen && (
           <>
             <div
-              className="fixed inset-0 bg-black/50 z-30 md:hidden"
+              className="fixed inset-0 bg-black/50 z-40"
               onClick={() => setMobileOpen(false)}
             />
-            <div className="fixed left-0 top-14 w-64 h-screen bg-white border-r border-gray-200 z-40 overflow-y-auto">
-              <nav className="px-4 py-6 space-y-2">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      isActive(item.href)
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-              <div className="border-t border-gray-200 p-4">
-                <Button
-                  onClick={handleLogout}
-                  variant="outline"
-                  className="w-full text-gray-700 border-gray-300 hover:bg-gray-50"
+            <nav className="absolute top-14 left-0 right-0 z-50 bg-white border-b border-gray-200 md:hidden">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block px-4 py-2 text-sm font-medium border-b border-gray-200 ${
+                    isActive(item.href)
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
-                  Logout
-                </Button>
-              </div>
-            </div>
+                  {item.label}
+                </Link>
+              ))}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 flex items-center"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </button>
+            </nav>
           </>
         )}
 
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
+        <main className="flex-1 overflow-auto md:ml-0 bg-white">
+          {children}
+        </main>
       </div>
     </div>
   );

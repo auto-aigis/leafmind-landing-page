@@ -2,20 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { authApi } from "@/app/_lib/api";
+import { useAuth } from "@/app/_lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function RegisterPage() {
+export default function OnboardingPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { user, refresh } = useAuth();
+  const [firstName, setFirstName] = useState("");
+  const [cityZip, setCityZip] = useState("");
+  const [plantCount, setPlantCount] = useState("1");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  if (user?.onboarding_complete) {
+    router.push("/dashboard");
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,10 +29,11 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await authApi.register(email, password);
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      await authApi.onboarding(firstName, cityZip, parseInt(plantCount) || 1);
+      await refresh();
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : "Onboarding failed");
     } finally {
       setLoading(false);
     }
@@ -36,8 +43,8 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white p-4">
       <Card className="w-full max-w-md border-gray-200">
         <CardHeader>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Join LeafMind and get AI plant care advice</CardDescription>
+          <CardTitle className="text-2xl">Welcome to LeafMind</CardTitle>
+          <CardDescription>Tell us a bit about yourself</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -48,40 +55,45 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="firstName">First Name</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="firstName"
+                type="text"
+                placeholder="Your name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="cityZip">City or Zip Code</Label>
               <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="cityZip"
+                type="text"
+                placeholder="e.g., San Francisco or 94102"
+                value={cityZip}
+                onChange={(e) => setCityZip(e.target.value)}
                 required
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="plantCount">How many plants do you have?</Label>
+              <Input
+                id="plantCount"
+                type="number"
+                min="1"
+                placeholder="1"
+                value={plantCount}
+                onChange={(e) => setPlantCount(e.target.value)}
+              />
+            </div>
+
             <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
-              {loading ? "Creating account..." : "Sign Up"}
+              {loading ? "Saving..." : "Get Started"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="text-green-600 hover:underline font-medium">
-              Sign in
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,175 +1,265 @@
 "use client";
 
-import { useParams } from 'next/navigation';
-import { useAuth } from '@/app/_lib/hooks';
-import { useEffect, useState, useRef } from 'react';
-import { plantApi, chatApi } from '@/app/_lib/api';
-import * as types from '@/app/_lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Send, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { plantApi, chatApi } from "@/app/_lib/api";
+import type { Plant, ChatMessage } from "@/app/_lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThumbsUp, ThumbsDown, Leaf, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export default function PlantChatPage() {
+export default function PlantPage() {
   const params = useParams();
-  const { token, loading: authLoading } = useAuth();
+  const router = useRouter();
   const plantId = params.id as string;
-  const [plant, setPlant] = useState<types.Plant | null>(null);
-  const [messages, setMessages] = useState<types.Message[]>([]);
-  const [messageText, setMessageText] = useState('');
+  const [plant, setPlant] = useState<Plant | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!token || authLoading) return;
-    const loadPlant = async () => {
-      try {
-        const p = await plantApi.get(token, plantId);
-        setPlant(p);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load plant');
-      }
-    };
-    loadPlant();
-  }, [token, plantId, authLoading]);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    if (!token || authLoading) return;
-    const loadMessages = async () => {
-      try {
-        const msgs = await chatApi.getMessages(token, plantId);
-        setMessages(msgs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load messages');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadMessages();
-  }, [token, plantId, authLoading]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
 
-  const handlePhotoUpload = async (file: File) => {
-    if (!token) return;
-    try {
-      const url = await plantApi.uploadPhoto(token, plantId, file);
-      setImageUrl(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Photo upload failed');
-    }
-  };
+  useEffect(() => {
+    Promise.all([
+      plantApi.get(plantId).then(setPlant),
+      chatApi.getHistory(plantId).then((h) => setMessages(h.messages)),
+    ]).finally(() => setLoading(false));
+  }, [plantId]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !messageText.trim()) return;
+    if (!input.trim()) return;
+
     setSending(true);
-    setError('');
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
+      confidence_label: null,
+      reasoning_line: null,
+      fallback_step: null,
+      feedback: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
 
     try {
-      const response = await chatApi.sendMessage(token, plantId, messageText, imageUrl || undefined);
-      setMessages([...messages, response]);
-      setMessageText('');
-      setImageUrl(null);
+      const response = await chatApi.sendMessage(plantId, input);
+      setMessages((prev) => [...prev, response]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message');
+      console.error("Failed to send message", err);
     } finally {
       setSending(false);
     }
   };
 
-  if (loading || authLoading) return <div>Loading...</div>;
-  if (!plant) return <div>Plant not found</div>;
+  const handleFeedback = async (
+    msgId: string,
+    feedback: "thumbs_up" | "thumbs_down"
+  ) => {
+    try {
+      await chatApi.feedback(plantId, msgId, feedback);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, feedback } : m))
+      );
+    } catch (err) {
+      console.error("Failed to save feedback", err);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await plantApi.delete(plantId);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Failed to delete plant", err);
+    } finally {
+      setDeleting(false);
+      setShowDelete(false);
+    }
+  };
+
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!plant) return <div className="p-6">Plant not found</div>;
 
   return (
-    <div className="max-w-4xl mx-auto h-screen flex flex-col">
-      <Card className="border-gray-200 mb-4">
-        <CardHeader>
-          <div className="flex items-start gap-4">
-            {plant.photo_url && <img src={plant.photo_url} alt={plant.nickname} className="w-20 h-20 object-cover rounded" />}
-            <div>
-              <CardTitle className="text-gray-900">{plant.nickname}</CardTitle>
-              {plant.species && <p className="text-sm text-gray-600">{plant.species}</p>}
-              <p className="text-xs text-gray-500 mt-2">Window: {plant.window_direction} | Pot: {plant.pot_size} | Soil: {plant.soil_type}</p>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="flex-1 overflow-y-auto bg-gray-50 rounded-lg p-4 mb-4 space-y-4">
-        {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</div>}
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            <p>No messages yet. Start a conversation about your plant!</p>
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-              msg.role === 'user'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-900'
-            }`}>
-              <p className="text-sm">{msg.content}</p>
-              {msg.confidence_label && msg.role === 'assistant' && (
-                <div className="text-xs mt-2 opacity-80">
-                  <p>{msg.confidence_label}</p>
-                  {msg.reasoning && <p className="italic mt-1">{msg.reasoning}</p>}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+    <div className="mx-auto max-w-4xl p-6 h-screen flex flex-col">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">{plant.nickname}</h1>
+          {plant.species && (
+            <p className="text-gray-600 text-sm mt-1">{plant.species}</p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDelete(true)}
+          className="text-red-600 hover:bg-red-50"
+        >
+          <Trash2 className="h-5 w-5" />
+        </Button>
       </div>
 
-      <form onSubmit={handleSendMessage} className="space-y-3">
-        {imageUrl && (
-          <div className="relative w-20 h-20 bg-gray-100 rounded">
-            <img src={imageUrl} alt="Upload preview" className="w-full h-full object-cover rounded" />
-            <button
-              type="button"
-              onClick={() => setImageUrl(null)}
-              className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-            >
-              ×
-            </button>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => e.target.files?.[0] && handlePhotoUpload(e.target.files[0])}
-            className="hidden"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            className="border-gray-300 text-gray-700"
-          >
-            <Upload size={18} />
-          </Button>
-          <Input
-            type="text"
-            placeholder="Ask about your plant..."
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            className="flex-1 border-gray-300 text-gray-900 placeholder:text-gray-500"
-          />
-          <Button type="submit" disabled={sending || !messageText.trim()}>
-            <Send size={18} />
-          </Button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="border-gray-200">
+          <CardContent className="p-4 text-sm">
+            <p className="text-gray-600">Pot Size</p>
+            <p className="font-semibold text-gray-900 capitalize">{plant.pot_size}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-gray-200">
+          <CardContent className="p-4 text-sm">
+            <p className="text-gray-600">Soil Type</p>
+            <p className="font-semibold text-gray-900 capitalize">{plant.soil_type}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-gray-200">
+          <CardContent className="p-4 text-sm">
+            <p className="text-gray-600">Window Direction</p>
+            <p className="font-semibold text-gray-900 capitalize">{plant.window_direction.replace("_", " ")}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {plant.notes && (
+        <Card className="mb-6 border-gray-200">
+          <CardContent className="p-4 text-sm">
+            <p className="text-gray-600 font-medium mb-1">Notes</p>
+            <p className="text-gray-900">{plant.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="flex-1 flex flex-col border-gray-200 mb-4">
+        <CardHeader className="pb-4 border-b border-gray-200">
+          <CardTitle className="text-lg">Care Chat</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+              <Leaf className="h-8 w-8 mb-2 text-gray-300" />
+              <p>No messages yet. Ask for care advice!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-sm rounded-lg p-3 ${
+                      msg.role === "user"
+                        ? "bg-green-100 text-green-900"
+                        : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <p className="text-sm">{msg.content}</p>
+                    {msg.confidence_label && (
+                      <p className="text-xs opacity-70 mt-1">Confidence: {msg.confidence_label}</p>
+                    )}
+                    {msg.reasoning_line && (
+                      <p className="text-xs opacity-70 mt-1 font-medium">{msg.reasoning_line}</p>
+                    )}
+                    {msg.fallback_step && (
+                      <p className="text-xs opacity-70 mt-1">Next step: {msg.fallback_step}</p>
+                    )}
+                    {msg.role === "assistant" && (
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleFeedback(msg.id, "thumbs_up")}
+                          className={`text-lg ${
+                            msg.feedback === "thumbs_up" ? "opacity-100" : "opacity-50 hover:opacity-100"
+                          }`}
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => handleFeedback(msg.id, "thumbs_down")}
+                          className={`text-lg ${
+                            msg.feedback === "thumbs_down" ? "opacity-100" : "opacity-50 hover:opacity-100"
+                          }`}
+                        >
+                          👎
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <form onSubmit={handleSendMessage} className="flex gap-2">
+        <Input
+          type="text"
+          placeholder="Describe symptoms or ask for care advice..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={sending}
+          className="border-gray-300"
+        />
+        <Button
+          type="submit"
+          disabled={sending || !input.trim()}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          {sending ? "Sending..." : "Send"}
+        </Button>
       </form>
+
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent className="border-gray-200">
+          <DialogHeader>
+            <DialogTitle>Delete {plant.nickname}?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The plant profile and all chat history will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowDelete(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

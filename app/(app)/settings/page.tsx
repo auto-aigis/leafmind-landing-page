@@ -1,161 +1,185 @@
 "use client";
 
-import { useAuth } from '@/app/_lib/hooks';
-import { useEffect, useState } from 'react';
-import { authApi, settingsApi } from '@/app/_lib/api';
-import * as types from '@/app/_lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import Link from 'next/link';
+import { useEffect, useState } from "react";
+import { settingsApi, authApi } from "@/app/_lib/api";
+import { useAuth } from "@/app/_lib/hooks";
+import type { ApiKey } from "@/app/_lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, token, loading } = useAuth();
-  const [subscription, setSubscription] = useState<types.Subscription | null>(null);
-  const [apiKey, setApiKey] = useState('');
-  const [newApiKey, setNewApiKey] = useState('');
+  const { user } = useAuth();
+  const [apiKey, setApiKey] = useState("");
+  const [maskedKey, setMaskedKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [subscription, setSubscription] = useState<{ plan: string; status: string } | null>(null);
 
   useEffect(() => {
-    if (!token || loading) return;
-
-    const loadData = async () => {
-      try {
-        const sub = await authApi.subscription(token);
-        setSubscription(sub);
-        const keyData = await settingsApi.getApiKey(token);
-        if (keyData.has_key) setApiKey(`●●●●●●●●`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load settings');
-      }
-    };
-
-    loadData();
-  }, [token, loading]);
+    Promise.all([
+      settingsApi
+        .getOpenAiKey()
+        .then((result) => {
+          setMaskedKey(result.api_key);
+        })
+        .catch(() => setMaskedKey(null)),
+      authApi.getSubscription().then((s) => setSubscription(s as any)),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   const handleSaveApiKey = async () => {
-    if (!token || !newApiKey.trim()) return;
+    if (!apiKey.trim()) return;
     setSaving(true);
-    setError('');
-    setSuccess('');
+    setMessage(null);
 
     try {
-      await settingsApi.setApiKey(token, newApiKey);
-      setApiKey(`●●●●●●●●`);
-      setNewApiKey('');
-      setSuccess('API key saved successfully');
-      setTimeout(() => setSuccess(''), 3000);
+      await settingsApi.saveOpenAiKey(apiKey);
+      setMessage({ type: "success", text: "API key saved successfully" });
+      setApiKey("");
+      const result = await settingsApi.getOpenAiKey();
+      setMaskedKey(result.api_key);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save API key');
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to save API key",
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  const handleDeleteApiKey = async () => {
+    setDeleting(true);
+    setMessage(null);
 
-   const periodEnd = subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'N/A';
-   const tierDisplay = subscription?.tier ? subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1) : 'Unknown';
+    try {
+      await settingsApi.deleteOpenAiKey();
+      setMessage({ type: "success", text: "API key deleted" });
+      setMaskedKey(null);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to delete API key",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+    <div className="mx-auto max-w-2xl p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-600 mt-1">Manage your account and preferences</p>
+      </div>
 
       <Card className="border-gray-200">
         <CardHeader>
-          <CardTitle className="text-gray-900">Account</CardTitle>
+          <CardTitle>Account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm text-gray-600">Email</p>
-            <p className="text-gray-900 font-medium">{user?.email}</p>
+            <Label className="text-gray-600">Email</Label>
+            <p className="font-medium text-gray-900">{user?.email}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Name</p>
-            <p className="text-gray-900 font-medium">{user?.display_name}</p>
+          {user?.first_name && (
+            <div>
+              <Label className="text-gray-600">Name</Label>
+              <p className="font-medium text-gray-900">{user.first_name}</p>
+            </div>
+          )}
+          {user?.city_zip && (
+            <div>
+              <Label className="text-gray-600">Location</Label>
+              <p className="font-medium text-gray-900">{user.city_zip}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-gray-200">
+        <CardHeader>
+          <CardTitle>Subscription</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 text-sm">Current Plan</p>
+              <p className="font-semibold text-gray-900 capitalize">
+                {subscription?.plan === "pro" ? "LeafMind Pro" : "Free"}
+              </p>
+            </div>
+            {subscription?.status === "active" && (
+              <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <Card className="border-gray-200">
         <CardHeader>
-          <CardTitle className="text-gray-900">Subscription</CardTitle>
+          <CardTitle>OpenAI API Key</CardTitle>
+          <CardDescription>
+            Optionally provide your own OpenAI API key for faster, personalized responses
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600">Current Plan</p>
-            <p className="text-gray-900 font-medium">{tierDisplay} Tier</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Status</p>
-            <p className="text-gray-900 font-medium capitalize">{subscription?.status}</p>
-          </div>
-          {subscription?.status === 'active' && (
-            <div>
-              <p className="text-sm text-gray-600">Next Billing Date</p>
-              <p className="text-gray-900 font-medium">{periodEnd}</p>
+          {message && (
+            <Alert
+              variant={message.type === "success" ? "default" : "destructive"}
+              className={message.type === "success" ? "border-green-200 bg-green-50" : ""}
+            >
+              <AlertDescription className={message.type === "success" ? "text-green-800" : ""}>
+                {message.text}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {maskedKey && (
+            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Saved Key</p>
+                <p className="font-mono text-sm text-gray-900">{maskedKey}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDeleteApiKey}
+                disabled={deleting}
+                className="text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           )}
-           {subscription?.tier !== 'free' && (
-             <Link href={process.env.NEXT_PUBLIC_PADDLE_PORTAL_URL || '#'} target="_blank">
-               <Button className="mt-4">
-                 Manage Subscription
-               </Button>
-             </Link>
-           )}
-         </CardContent>
-       </Card>
 
-      </Card>
-
-      <Card className="border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-gray-900">OpenAI API Key (Optional)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-gray-600">Provide your own OpenAI API key to use your account credits instead of ours.</p>
-          {apiKey && <p className="text-sm text-green-600">✓ API key configured</p>}
-          <div>
-            <Label htmlFor="apikey" className="text-gray-900">New API Key</Label>
+          <div className="space-y-2">
+            <Label htmlFor="apiKey">API Key</Label>
             <Input
-              id="apikey"
+              id="apiKey"
               type="password"
-              placeholder="sk-..."
-              value={newApiKey}
-              onChange={(e) => setNewApiKey(e.target.value)}
-              className="border-gray-300 text-gray-900 placeholder:text-gray-500"
+              placeholder="sk_live_..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
-          {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded">{error}</div>}
-          {success && <div className="text-sm text-green-600 bg-green-50 p-3 rounded">{success}</div>}
-          <div className="flex gap-2">
-            <Button onClick={handleSaveApiKey} disabled={saving || !newApiKey.trim()}>
-              {saving ? 'Saving...' : 'Save API Key'}
-            </Button>
-            {apiKey && (
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  if (!token) return;
-                  try {
-                    await settingsApi.deleteApiKey(token);
-                    setApiKey('');
-                    setSuccess('API key removed');
-                    setTimeout(() => setSuccess(''), 3000);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Failed to remove key');
-                  }
-                }}
-                className="border-gray-300 text-gray-700"
-              >
-                Remove Key
-              </Button>
-            )}
-          </div>
+
+          <Button
+            onClick={handleSaveApiKey}
+            disabled={saving || !apiKey.trim()}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {saving ? "Saving..." : "Save API Key"}
+          </Button>
         </CardContent>
       </Card>
     </div>
