@@ -1,1 +1,63 @@
-'use client';\n\nimport { createContext, useContext, useEffect, useState, ReactNode } from 'react';\nimport type { User, Subscription } from '@/app/_lib/types';\nimport { authApi } from '@/app/_lib/api';\n\nexport interface AuthContextType {\n  user: User | null;\n  subscription: Subscription | null;\n  loading: boolean;\n  refresh: () => Promise<void>;\n  logout: () => Promise<void>;\n}\n\nexport const AuthContext = createContext<AuthContextType | undefined>(undefined);\n\nexport function useAuth() {\n  const context = useContext(AuthContext);\n  if (!context) {\n    throw new Error('useAuth must be used within AuthProvider');\n  }\n  return context;\n}\n\nexport default function AuthProvider({ children }: { children: ReactNode }) {\n  const [user, setUser] = useState<User | null>(null);\n  const [subscription, setSubscription] = useState<Subscription | null>(null);\n  const [loading, setLoading] = useState(true);\n\n  const refresh = async () => {\n    try {\n      const userData = await authApi.me();\n      setUser(userData);\n      const subData = await authApi.getSubscription();\n      setSubscription(subData);\n    } catch {\n      setUser(null);\n      setSubscription(null);\n    }\n  };\n\n  const logout = async () => {\n    try {\n      await authApi.logout();\n      setUser(null);\n      setSubscription(null);\n    } catch {}\n  };\n\n  useEffect(() => {\n    const init = async () => {\n      await refresh();\n      setLoading(false);\n    };\n    init();\n  }, []);\n\n  return (\n    <AuthContext.Provider value={{ user, subscription, loading, refresh, logout }}>\n      {children}\n    </AuthContext.Provider>\n  );\n}\n
+'use client';
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import type { User, Subscription } from '@/app/_lib/types';
+import { authApi } from '@/app/_lib/api';
+
+export interface AuthContextType {
+  user: User | null;
+  subscription: Subscription | null;
+  loading: boolean;
+  refresh: () => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}
+
+export default function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = async () => {
+    try {
+      const userData = await authApi.me();
+      setUser(userData);
+      const subData = await authApi.getSubscription();
+      setSubscription(subData);
+    } catch {
+      setUser(null);
+      setSubscription(null);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authApi.logout();
+      setUser(null);
+      setSubscription(null);
+    } catch {}
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      await refresh();
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, subscription, loading, refresh, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
