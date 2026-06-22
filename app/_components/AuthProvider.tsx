@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import type { User, Subscription } from '@/app/_lib/types';
-import { authApi } from '@/app/_lib/api';
+import { createContext, ReactNode, useEffect, useState, useCallback } from "react";
+import { authApi } from "@/app/_lib/api";
+import type { User } from "@/app/_lib/types";
 
 export interface AuthContextType {
   user: User | null;
-  subscription: Subscription | null;
   loading: boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
@@ -14,49 +13,32 @@ export interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-}
-
-export default function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
-      const userData = await authApi.me();
-      setUser(userData);
-      const subData = await authApi.getSubscription();
-      setSubscription(subData);
+      const data = await authApi.me();
+      setUser(data);
     } catch {
       setUser(null);
-      setSubscription(null);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
       setUser(null);
-      setSubscription(null);
     } catch {}
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      await refresh();
-      setLoading(false);
-    };
-    init();
   }, []);
 
+  useEffect(() => {
+    refresh().finally(() => setLoading(false));
+  }, [refresh]);
+
   return (
-    <AuthContext.Provider value={{ user, subscription, loading, refresh, logout }}>
+    <AuthContext.Provider value={{ user, loading, refresh, logout }}>
       {children}
     </AuthContext.Provider>
   );

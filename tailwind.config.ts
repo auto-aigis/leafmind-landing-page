@@ -1,7 +1,7 @@
-import type { Config } from 'tailwindcss';
-
+/** @type {import('@tailwindcss/postcss').Config} */
 export default {
-  content: ['./{app,components}/**/*.{ts,tsx}'],
-  theme: {extend: {}},
-  plugins: [],
-} as Config;
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+  ],
+};
