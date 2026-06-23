@@ -1,45 +1,34 @@
-"use client";
+'use client';
 
-import { createContext, ReactNode, useEffect, useState, useCallback } from "react";
-import { authApi } from "@/app/_lib/api";
-import type { User } from "@/app/_lib/types";
+import {createContext, ReactNode, useCallback, useEffect, useState} from 'react';
+import {User} from '@/_lib/types';
+import {authApi} from '@/_lib/api';
 
-export interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  refresh: () => Promise<void>;
-  logout: () => Promise<void>;
-}
+export const AuthContext = createContext<{user: User | null; loading: boolean; refresh: () => Promise<void>; logout: () => Promise<void>} | null>(null);
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({children}: {children: ReactNode}) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      const data = await authApi.me();
-      setUser(data);
+      const u = await authApi.me();
+      setUser(u);
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await authApi.logout();
-      setUser(null);
-    } catch {}
+    await authApi.logout();
+    setUser(null);
   }, []);
 
   useEffect(() => {
-    refresh().finally(() => setLoading(false));
+    refresh();
   }, [refresh]);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, refresh, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{user, loading, refresh, logout}}>{children}</AuthContext.Provider>;
 }

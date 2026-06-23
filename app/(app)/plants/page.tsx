@@ -1,15 +1,13 @@
 'use client';
 
 import {useEffect, useState} from 'react';
-import {useAuth} from '@/_lib/hooks';
+import Link from 'next/link';
 import {plantsApi} from '@/_lib/api';
 import {Plant} from '@/_lib/types';
 import {Card, CardHeader, CardTitle, CardContent} from '@/components/ui/card';
-import {Badge} from '@/components/ui/badge';
-import {Leaf} from 'lucide-react';
+import {Button} from '@/components/ui/button';
 
-export default function DashboardPage() {
-  const {user} = useAuth();
+export default function PlantsPage() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,41 +25,25 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  const tierColors = {free: 'bg-gray-100 text-gray-800', grower: 'bg-blue-100 text-blue-800', botanist: 'bg-purple-100 text-purple-800'};
-
   return (
     <div className="mx-auto max-w-5xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {user?.display_name}!</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-gray-600">Plan:</span>
-          <Badge className={tierColors[user?.tier as keyof typeof tierColors] || ''}>
-            {user?.tier.charAt(0).toUpperCase() + user?.tier.slice(1)}
-          </Badge>
-        </div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">My Plants</h1>
+        <Link href="/plants/new"><Button>Add Plant</Button></Link>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Leaf className="w-5 h-5" />
-            Your Plants
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading ? (
             <div>Loading...</div>
           ) : plants.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No plants yet. Upgrade to start tracking!</p>
-            </div>
+            <div className="text-center py-8 text-gray-500">No plants yet.</div>
           ) : (
             <div className="grid gap-4">
               {plants.map((plant) => (
                 <div key={plant.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                   <h3 className="font-semibold text-gray-900">{plant.name}</h3>
                   <p className="text-sm text-gray-600">{plant.species}</p>
-                  {plant.notes && <p className="text-sm text-gray-600 mt-1">{plant.notes}</p>}
                 </div>
               ))}
             </div>

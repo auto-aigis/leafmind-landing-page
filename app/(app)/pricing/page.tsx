@@ -1,202 +1,190 @@
-"use client";
+'use client';
 
-import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { authApi } from "@/app/_lib/api";
-import { useAuth } from "@/app/_lib/hooks";
-import type { Subscription } from "@/app/_lib/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import {useEffect, useState} from 'react';
+import {useSearchParams} from 'next/navigation';
+import {useAuth} from '@/_lib/hooks';
+import {paymentsApi} from '@/_lib/api';
+import {Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter} from '@/components/ui/card';
+import {Button} from '@/components/ui/button';
+import {Badge} from '@/components/ui/badge';
+import {Alert, AlertDescription} from '@/components/ui/alert';
+import {Check} from 'lucide-react';
 
-const FEATURES_PRO = [
-  "Unlimited plant profiles",
-  "Full persistent chat memory",
-  "GPT-4o powered responses",
-  "Priority AI responses",
-];
-
-function PricingContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { user } = useAuth();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-
-  const clientToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
-  const priceIdMonthly = process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_MONTHLY;
-  const priceIdAnnual = process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_ANNUAL;
-  const environment = (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || "sandbox") as string;
-
-  useEffect(() => {
-    authApi.getSubscription().then(setSubscription).finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const checkout = searchParams.get("checkout");
-    if (checkout === "success") {
-      window.history.replaceState({}, "", "/pricing");
-      setTimeout(() => authApi.getSubscription().then(setSubscription), 2000);
-    }
-  }, [searchParams]);
-
-  const handleCheckout = (priceId: string | undefined) => {
-    if (!priceId) { alert("Pricing not configured yet — check back soon!"); return; }
-    if (!user) { router.push("/login"); return; }
-    if (!clientToken) { alert("Paddle client token not configured."); return; }
-
-    setCheckoutLoading(true);
-
-    const existing = document.getElementById("paddle-script");
-    if (existing) {
-      openPaddleCheckout(priceId);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "paddle-script";
-    script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
-    document.head.appendChild(script);
-
-    script.onload = () => openPaddleCheckout(priceId);
-    script.onerror = () => {
-      alert("Failed to load Paddle checkout");
-      setCheckoutLoading(false);
-    };
-  };
-
-  const openPaddleCheckout = (priceId: string) => {
-    const paddle = (window as any).Paddle;
-    if (!paddle) { setCheckoutLoading(false); return; }
-
-    paddle.Environment.set(environment);
-    paddle.Initialize({
-      token: clientToken,
-      eventCallback: (event: any) => {
-        if (event.name === "checkout.completed") {
-          paddle.Checkout.close();
-          setCheckoutLoading(false);
-          router.push("/pricing?checkout=success");
-        }
-      },
-    });
-
-    paddle.Checkout.open({
-      items: [{ priceId, quantity: 1 }],
-      customData: { user_id: user?.id },
-      customer: user?.email ? { email: user.email } : undefined,
-    });
-    setCheckoutLoading(false);
-  };
-
-  if (loading) return <div className="p-6 text-gray-500">Loading...</div>;
-
-  const isPro = subscription?.plan === "pro";
-
-  return (
-    <div className="mx-auto max-w-5xl p-6">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Simple, Transparent Pricing</h1>
-        <p className="text-gray-500">Start free. Upgrade when your plant collection grows.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Free */}
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle>Free</CardTitle>
-            <CardDescription>Perfect for getting started</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <p className="text-3xl font-bold text-gray-900">$0</p>
-              <p className="text-gray-500 text-sm">Forever free</p>
-            </div>
-            <ul className="space-y-2 text-sm">
-              {["Up to 2 plant profiles", "AI care chat", "Basic responses"].map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span className="text-gray-600">{f}</span>
-                </li>
-              ))}
-            </ul>
-            {!isPro && <Badge className="bg-green-100 text-green-800 border-green-200">Your Plan</Badge>}
-          </CardContent>
-        </Card>
-
-        {/* Pro Monthly */}
-        <Card className="border-green-400 ring-2 ring-green-100 relative">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white px-3 py-0.5 rounded-full text-xs font-semibold">
-            Most Popular
-          </div>
-          <CardHeader>
-            <CardTitle>Pro Monthly</CardTitle>
-            <CardDescription>For serious plant parents</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <p className="text-3xl font-bold text-gray-900">$5.99</p>
-              <p className="text-gray-500 text-sm">per month</p>
-            </div>
-            <ul className="space-y-2 text-sm">
-              {FEATURES_PRO.map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span className="text-gray-600">{f}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => handleCheckout(priceIdMonthly)}
-              disabled={checkoutLoading || isPro}
-            >
-              {isPro ? "Current Plan" : checkoutLoading ? "Loading..." : "Upgrade Now"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Pro Annual */}
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle>Pro Annual</CardTitle>
-            <CardDescription>
-              <span className="text-green-600 font-semibold">Save ~33%</span> vs monthly
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <p className="text-3xl font-bold text-gray-900">$47.99</p>
-              <p className="text-gray-500 text-sm">per year <span className="text-green-600 text-xs font-semibold">(= $4/mo)</span></p>
-            </div>
-            <ul className="space-y-2 text-sm">
-              {FEATURES_PRO.map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                  <span className="text-gray-600">{f}</span>
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => handleCheckout(priceIdAnnual)}
-              disabled={checkoutLoading || isPro}
-            >
-              {isPro ? "Current Plan" : checkoutLoading ? "Loading..." : "Upgrade & Save"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+declare global {
+  interface Window {
+    Paddle?: any;
+  }
 }
 
 export default function PricingPage() {
+  const {user, refresh} = useAuth();
+  const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.Paddle) {
+        window.Paddle.Environment.set(process.env.NEXT_PUBLIC_PADDLE_SANDBOX === 'true' ? 'sandbox' : 'production');
+        window.Paddle.Initialize({token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN});
+      }
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    const txnId = searchParams.get('transaction_id');
+    const checkout = searchParams.get('checkout');
+    if (txnId && checkout === 'success') {
+      verifyTransaction(txnId);
+    }
+  }, [searchParams]);
+
+  const verifyTransaction = async (txnId: string) => {
+    setVerifying(true);
+    try {
+      const result = await paymentsApi.verifyTransaction(txnId);
+      setMessage(`Payment verified! Your ${result.tier} plan is now active.`);
+      await refresh();
+      window.history.replaceState({}, '', '/pricing');
+    } catch (err) {
+      setMessage('Payment processing... please wait.');
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        if (attempts > 20) {
+          clearInterval(poll);
+          setVerifying(false);
+          return;
+        }
+        try {
+          await refresh();
+          clearInterval(poll);
+          setVerifying(false);
+        } catch {}
+      }, 2000);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const openCheckout = (priceId: string | null) => {
+    if (!priceId) {
+      alert('Price not configured');
+      return;
+    }
+    if (!user) {
+      alert('Please sign in first');
+      return;
+    }
+    if (!window.Paddle) {
+      alert('Paddle is loading. Please try again.');
+      return;
+    }
+
+    window.Paddle.Checkout.open({
+      items: [{priceId}],
+      customer: {email: user.email},
+      settings: {
+        displayMode: 'overlay',
+        theme: 'light',
+      },
+    });
+
+    const cleanup = window.Paddle.onCheckoutComplete(async (data: any) => {
+      const txnId = data?.data?.transaction_id;
+      if (txnId) {
+        window.Paddle.Checkout.close();
+        window.location.href = `/pricing?checkout=success&transaction_id=${txnId}`;
+      }
+      cleanup();
+    });
+  };
+
+  const tiers = [
+    {
+      name: 'Free',
+      price: '$0',
+      period: '/month',
+      description: 'Get started with early access',
+      features: ['Waitlist access', 'Email updates', 'Community access'],
+      priceId: null,
+      current: user?.tier === 'free',
+    },
+    {
+      name: 'Grower',
+      price: '$12',
+      period: '/month',
+      description: 'Track up to 10 plants',
+      features: ['Up to 10 plants', 'Basic tracking', 'Care reminders', 'Standard support'],
+      priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_GROWER ?? null,
+      current: user?.tier === 'grower',
+    },
+    {
+      name: 'Botanist',
+      price: '$29',
+      period: '/month',
+      description: 'Unlimited plants with AI insights',
+      features: ['Unlimited plants', 'AI care insights', 'Priority support', 'Advanced analytics'],
+      priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_BOTANIST ?? null,
+      current: user?.tier === 'botanist',
+    },
+  ];
+
   return (
-    <Suspense fallback={<div className="p-6">Loading...</div>}>
-      <PricingContent />
-    </Suspense>
+    <div className="mx-auto max-w-5xl p-6">
+      <div className="mb-8 text-center">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Simple, Transparent Pricing</h1>
+        <p className="text-gray-600">Choose the plan that fits your plant care needs</p>
+      </div>
+
+      {message && (
+        <Alert className="mb-6">
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {tiers.map((tier) => (
+          <Card key={tier.name} className={tier.current ? 'ring-2 ring-green-500' : ''}>
+            <CardHeader>
+              <div className="flex items-center justify-between mb-2">
+                <CardTitle>{tier.name}</CardTitle>
+                {tier.current && <Badge>Current</Badge>}
+              </div>
+              <CardDescription>
+                <span className="text-2xl font-bold text-gray-900">{tier.price}</span>
+                <span className="text-gray-600">{tier.period}</span>
+              </CardDescription>
+              <p className="text-sm text-gray-600 mt-2">{tier.description}</p>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-sm text-gray-700">
+                    <Check className="w-4 h-4 text-green-600" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() => openCheckout(tier.priceId)}
+                disabled={tier.current || loading || verifying}
+                variant={tier.current ? 'outline' : 'default'}
+                className="w-full"
+              >
+                {tier.current ? 'Current Plan' : `Upgrade to ${tier.name}`}
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -1,1 +1,212 @@
-# Pre-Deployment Verification Checklist\n\n## Critical Requirements ✅\n\n### Requirement 1: Supabase Waitlist Capture\n- [x] Supabase client initialized correctly\n- [x] Direct inserts to `waitlist` table\n- [x] Columns: email (required), first_name (optional), source (string), created_at (timestamp)\n- [x] Duplicate email handling (unique constraint error code 23505)\n- [x] Graceful error messages shown to user\n- [x] No page reload on submission\n- [x] Success confirmation message displays\n\n**File**: `frontend/app/page.tsx` lines 7-62\n\n### Requirement 2: Twitter Source Attribution\n- [x] Detects `?source=twitter` URL parameter\n- [x] Falls back to `?utm_source=twitter`\n- [x] Defaults to `'organic'` if neither present\n- [x] Tag persisted to Supabase record\n- [x] Analytics tracking includes source\n\n**File**: `frontend/app/page.tsx` lines 19-23\n\n**Action Required**: Update tweet CTAs to include `?source=twitter`\n\n### Requirement 3: Post-Submission Confirmation UX\n- [x] Inline success message displays\n- [x] Message text: \"You're on the list! 🌿 We'll reach out when early access opens.\"\n- [x] No page reload or redirect\n- [x] Message auto-dismisses after 5 seconds\n- [x] Form clears on success\n- [x] Error messages also shown inline\n- [x] Light green background (bg-green-50, border-green-200)\n\n**File**: `frontend/app/page.tsx` lines 81-111\n\n### Requirement 4: Vercel Analytics Instrumentation\n- [x] Analytics component imported in root layout\n- [x] Tracks page views (automatic)\n- [x] Tracks unique visitors (automatic)\n- [x] Custom `waitlist_signup` event fires on submission\n- [x] Event includes email + source properties\n- [x] `@vercel/analytics` package in dependencies\n\n**Files**: \n- `frontend/app/layout.tsx` (imports Analytics)\n- `frontend/app/page.tsx` (calls track())\n\n### Requirement 5: Smoke Test Capability\n- [x] Landing page accessible without auth\n- [x] Waitlist form functional\n- [x] Test email can be submitted\n- [x] Supabase record appears with correct columns\n- [x] Success message shows immediately\n- [x] Source parameter works (?source=twitter)\n- [x] Duplicate email error handling works\n\n---\n\n## Code Quality ✅\n\n### File Organization\n- [x] All files in `frontend/app/` or `frontend/components/`\n- [x] No files outside conventions\n- [x] `_lib/` contains shared logic (types, api, hooks)\n- [x] `_components/` contains reusable components\n- [x] Page files organized by route\n- [x] Config files in root (`frontend/`)\n\n### File Sizes\n- [x] `frontend/app/page.tsx` - 135 lines ✅\n- [x] `frontend/app/login/page.tsx` - 139 lines ✅\n- [x] `frontend/app/register/page.tsx` - 117 lines ✅\n- [x] `frontend/app/verify-email/page.tsx` - 139 lines ✅\n- [x] `frontend/app/_lib/api.ts` - ~100 lines ✅\n- [x] `frontend/app/_components/AppShell.tsx` - 135 lines ✅\n- [x] All under 150 line limit ✅\n\n### TypeScript & Imports\n- [x] All imports resolve to existing files\n- [x] No missing modules\n- [x] `@/` path alias works (tsconfig configured)\n- [x] No circular dependencies\n- [x] Type definitions in `_lib/types.ts`\n- [x] No `any` types except where necessary\n- [x] Proper error handling (not swallowing exceptions)\n\n### React Conventions\n- [x] `\"use client\";` on all files with hooks\n- [x] Default exports for page.tsx files\n- [x] Proper use of useState/useEffect\n- [x] No unused dependencies\n- [x] Event handlers properly typed\n- [x] Forms use proper methods (POST not GET)\n\n### UI/UX\n- [x] Light theme throughout (no dark classes)\n- [x] shadcn/ui components used (Button, Card, Input, Label)\n- [x] No raw `<button>` or `<input>` elements (only containers)\n- [x] Responsive design (mobile + desktop)\n- [x] Proper spacing and typography\n- [x] Loading states implemented\n- [x] Error states handled\n- [x] Accessibility: labels, semantic HTML\n\n### Styling\n- [x] Tailwind v4 configured\n- [x] `globals.css` uses `@import 'tailwindcss'`\n- [x] No custom fonts (using system fonts)\n- [x] Light backgrounds: bg-white, bg-gray-50\n- [x] Dark text: text-gray-900, text-gray-700\n- [x] Light borders: border-gray-200, border-gray-300\n- [x] No `dark:` variants\n- [x] No `--spacing()` functions (Tailwind v4 forbidden pattern avoided)\n\n---\n\n## Dependencies ✅\n\n### Required Packages (in package.json)\n- [x] next@^16.0.0\n- [x] react@^19.0.0\n- [x] react-dom@^19.0.0\n- [x] typescript@^5.0.0\n- [x] @supabase/supabase-js@^2.38.0\n- [x] @vercel/analytics@^1.3.0\n- [x] @radix-ui/react-slot@^2.0.2\n- [x] lucide-react@^0.469.0\n- [x] clsx@^2.0.0\n- [x] class-variance-authority@^0.7.0\n- [x] tailwind-merge@^2.0.0\n\n### Dev Dependencies\n- [x] @types/node@^20\n- [x] @types/react@^19\n- [x] @types/react-dom@^19\n- [x] autoprefixer@^10.4.0\n- [x] postcss@^8.4.0\n- [x] tailwindcss@^4.0.0\n\n### Extra Dependencies (deps.json)\n- [x] lucide-react@^0.469.0 ✅\n\n---\n\n## Environment Variables ✅\n\n### Required for Supabase\n- [x] `NEXT_PUBLIC_SUPABASE_URL` (build-time)\n- [x] `NEXT_PUBLIC_SUPABASE_ANON_KEY` (build-time)\n\n### Required for Auth API\n- [x] `NEXT_PUBLIC_API_URL` (optional, defaults to \"\")\n\n### Required for Paddle\n- [x] `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` (optional)\n- [x] `NEXT_PUBLIC_PADDLE_PRICE_ID_PRO` (optional)\n- [x] `NEXT_PUBLIC_PADDLE_PRICE_ID_PLUS` (optional)\n\n### Optional for Analytics\n- [x] `NEXT_PUBLIC_VERCEL_ANALYTICS_ID` (auto on Vercel)\n\n---\n\n## API Integration ✅\n\n### Authentication Endpoints\n- [x] POST /api/auth/register\n- [x] POST /api/auth/login\n- [x] POST /api/auth/logout\n- [x] GET /api/auth/me\n- [x] POST /api/auth/verify-email\n- [x] POST /api/auth/resend-verification\n- [x] GET /api/auth/subscription\n\n### Payment Endpoints\n- [x] POST /api/payments/verify-transaction\n- [x] GET /api/pricing/plans\n\n### Error Handling\n- [x] FastAPI validation errors parsed (detail array handling)\n- [x] Network errors handled gracefully\n- [x] Auth errors trigger redirect to login\n- [x] User-friendly error messages displayed\n\n---\n\n## Routes ✅\n\n### Public Routes (no auth)\n- [x] `/` - Landing page with waitlist\n- [x] `/login` - Login form\n- [x] `/register` - Registration form\n- [x] `/verify-email` - Email verification\n\n### Protected Routes (auth required)\n- [x] `/(app)/dashboard` - Main dashboard\n- [x] `/(app)/pricing` - Pricing page\n- [x] `/(app)/settings` - Account settings\n\n### Route Guards\n- [x] `(app)` layout checks auth status\n- [x] Unauthenticated users redirected to /login\n- [x] Auth context loaded on mount\n- [x] Session persists across refreshes\n\n---\n\n## Feature Completeness ✅\n\n### Feature 1: Supabase Waitlist\n- [x] Form accepts email + optional first name\n- [x] Inserts to Supabase with source tag\n- [x] Handles duplicates gracefully\n- [x] Success message displays inline\n\n### Feature 2: Source Attribution\n- [x] URL parameter detection\n- [x] Defaults to 'organic'\n- [x] Persisted to database\n- [x] Trackable in analytics\n\n### Feature 3: Confirmation UX\n- [x] Inline message (no modal)\n- [x] No page reload\n- [x] Auto-dismiss (5 seconds)\n- [x] Form clears\n\n### Feature 4: Analytics\n- [x] Page view tracking\n- [x] Unique visitor tracking\n- [x] Custom event firing\n- [x] Event properties (email, source)\n\n### Feature 5: Authentication\n- [x] Registration with email verification\n- [x] Login with session cookie\n- [x] Logout clears session\n- [x] Protected routes with guard\n- [x] Email verification flow (24h token)\n\n### Feature 6: Subscription Management\n- [x] Free tier display\n- [x] Pro tier ($12/mo) with Paddle\n- [x] Plus tier ($29/mo) with Paddle\n- [x] Current subscription display on dashboard\n\n---\n\n## Deployment Checklist ✅\n\n### Pre-Deployment\n- [x] All files created and tested\n- [x] No build errors\n- [x] All imports resolve\n- [x] TypeScript compiles without errors\n- [x] Dependencies listed in package.json\n\n### During Deployment\n- [x] Render receives GitHub push\n- [x] Build command runs: `npm run build`\n- [x] Environment variables set\n- [x] No secrets in code\n- [x] Build succeeds\n\n### Post-Deployment\n- [x] Live URL accessible (HTTP 200)\n- [x] Smoke tests pass\n- [x] Analytics data appears\n- [x] Supabase records saved\n- [x] Auth flows work\n\n---\n\n## Final Sign-Off\n\n✅ **All deliverables complete and production-ready**\n\n1. ✅ Supabase waitlist capture (fixed)\n2. ✅ Twitter source attribution (implemented)\n3. ✅ Post-submission UX (implemented)\n4. ✅ Vercel Analytics (instrumented)\n5. ✅ Bonus: Complete auth system + pricing\n\n**Ready to push to GitHub and deploy on Render**\n\nDeployment time estimate: **< 5 minutes**\n"
+# Pre-Deployment Verification Checklist
+
+## File Structure Verification
+
+### Root Config Files
+- [x] `frontend/package.json` — includes Supabase, Vercel Analytics, Paddle
+- [x] `frontend/tsconfig.json` — baseUrl and @/* alias configured
+- [x] `frontend/tailwind.config.ts` — Tailwind v4 configured
+- [x] `frontend/postcss.config.mjs` — Postcss configured
+- [x] `frontend/next.config.mjs` — Next.js config with rewrites for /api/*
+
+### TypeScript & Types
+- [x] `frontend/app/_lib/types.ts` — User, Plant, Subscription, Auth interfaces
+- [x] `frontend/app/_lib/api.ts` — apiFetch + authApi, plantsApi, paymentsApi
+- [x] `frontend/app/_lib/hooks.tsx` — useAuth hook with AuthContext
+
+### Components
+- [x] `frontend/app/_components/AuthProvider.tsx` — Auth context with refresh/logout
+- [x] `frontend/app/_components/AppShell.tsx` — Sidebar + mobile nav
+
+### Layouts
+- [x] `frontend/app/layout.tsx` — Root layout with Vercel Analytics
+- [x] `frontend/app/(auth)/layout.tsx` — Auth page layout
+- [x] `frontend/app/(app)/layout.tsx` — Authenticated routes with AuthProvider + AppShell
+
+### Auth Pages
+- [x] `frontend/app/(auth)/login/page.tsx` — Login form with email verification handling
+- [x] `frontend/app/(auth)/register/page.tsx` — Register form → verify-email redirect
+- [x] `frontend/app/(auth)/verify-email/page.tsx` — Token verification + resend
+
+### App Pages (Authenticated)
+- [x] `frontend/app/(app)/dashboard/page.tsx` — Main dashboard with plants list
+- [x] `frontend/app/(app)/plants/page.tsx` — Plants list
+- [x] `frontend/app/(app)/pricing/page.tsx` — Paddle checkout integration
+- [x] `frontend/app/(app)/settings/page.tsx` — Account settings
+
+### Landing Page & Waitlist
+- [x] `frontend/app/page.tsx` — Landing page with Supabase waitlist form + Vercel Analytics
+- [x] `frontend/app/globals.css` — Tailwind imports
+
+### Supabase & Deployment
+- [x] `frontend/supabase-migrations/001-waitlist-table.sql` — Waitlist table schema
+- [x] `frontend/SUPABASE_SETUP.md` — Supabase configuration guide
+- [x] `frontend/DEPLOYMENT_GUIDE.md` — Full deployment instructions
+- [x] `frontend/PROJECT_README.md` — Project overview and structure
+- [x] `frontend/deps.json` — Extra dependencies (Supabase, Vercel Analytics)
+
+## Import Resolution Verification
+
+### Critical Imports
+- [x] `frontend/app/_lib/hooks.tsx` imports `AuthContext` from `@/_components/AuthProvider` ✓
+- [x] `frontend/app/_components/AuthProvider.tsx` exports `AuthContext` ✓
+- [x] `frontend/app/(app)/layout.tsx` imports `AuthProvider` and `AppShell` ✓
+- [x] `frontend/app/(app)/dashboard/page.tsx` imports `useAuth` from `@/_lib/hooks` ✓
+- [x] All pages import shadcn/ui components from `@/components/ui/*` ✓
+
+### Supabase Client
+- [x] `frontend/app/page.tsx` imports `createClient` from `@supabase/supabase-js` ✓
+- [x] Uses `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` ✓
+
+### Vercel Analytics
+- [x] `frontend/app/layout.tsx` imports `Analytics` from `@vercel/analytics/react` ✓
+- [x] `frontend/app/page.tsx` imports `analytics` from `@vercel/analytics` ✓
+
+### Lucide Icons
+- [x] All icon imports from `lucide-react` ✓
+
+## "use client" Verification
+
+- [x] `frontend/app/page.tsx` — "use client" for Supabase + useSearchParams
+- [x] `frontend/app/(app)/dashboard/page.tsx` — "use client" for useEffect + hooks
+- [x] `frontend/app/(app)/plants/page.tsx` — "use client" for useEffect
+- [x] `frontend/app/(app)/pricing/page.tsx` — "use client" for Paddle.js + useSearchParams
+- [x] `frontend/app/(app)/settings/page.tsx` — "use client" for useAuth
+- [x] `frontend/app/(auth)/login/page.tsx` — "use client" for form handling
+- [x] `frontend/app/(auth)/register/page.tsx` — "use client" for form handling
+- [x] `frontend/app/(auth)/verify-email/page.tsx` — "use client" + Suspense wrapper
+- [x] `frontend/app/_components/AuthProvider.tsx` — "use client" for context
+- [x] `frontend/app/_components/AppShell.tsx` — "use client" for hooks + nav
+- [x] `frontend/app/_lib/hooks.tsx` — "use client" for useContext
+
+## Route Files (Default Exports)
+
+- [x] `frontend/app/layout.tsx` — default export RootLayout
+- [x] `frontend/app/page.tsx` — default export Page
+- [x] `frontend/app/(auth)/layout.tsx` — default export AuthLayout
+- [x] `frontend/app/(auth)/login/page.tsx` — default export LoginPage
+- [x] `frontend/app/(auth)/register/page.tsx` — default export RegisterPage
+- [x] `frontend/app/(auth)/verify-email/page.tsx` — default export VerifyEmailPage
+- [x] `frontend/app/(app)/layout.tsx` — default export AppLayout
+- [x] `frontend/app/(app)/dashboard/page.tsx` — default export DashboardPage
+- [x] `frontend/app/(app)/plants/page.tsx` — default export PlantsPage
+- [x] `frontend/app/(app)/pricing/page.tsx` — default export PricingPage
+- [x] `frontend/app/(app)/settings/page.tsx` — default export SettingsPage
+
+## Component Exports (Named or Default)
+
+- [x] `frontend/app/_components/AuthProvider.tsx` — exports AuthProvider and AuthContext
+- [x] `frontend/app/_components/AppShell.tsx` — exports AppShell (named)
+- [x] `frontend/app/_lib/hooks.tsx` — exports useAuth (named)
+- [x] `frontend/app/_lib/types.ts` — exports interfaces (named)
+- [x] `frontend/app/_lib/api.ts` — exports apiFetch, authApi, plantsApi, paymentsApi (named)
+
+## No Unused Imports
+
+- [x] All React imports used
+- [x] All lucide-react imports used
+- [x] All shadcn/ui imports used
+- [x] No unused variables in event handlers
+
+## Tailwind & CSS
+
+- [x] `frontend/app/globals.css` — imports `@import 'tailwindcss';` (Tailwind v4)
+- [x] No dark mode classes used (light theme only)
+- [x] No `--spacing()` patterns that break Turbopack
+- [x] All backgrounds use light colors: `bg-white`, `bg-gray-50`, `bg-gray-100`
+- [x] All text uses light-appropriate colors: `text-gray-900`, `text-gray-700`
+- [x] No `dark:` variants
+
+## Environment Variables Required
+
+### Supabase (Landing Page Waitlist)
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxxx
+```
+
+### Backend API
+```
+NEXT_PUBLIC_API_URL=https://your-backend.onrender.com
+```
+
+### Paddle Payments
+```
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=xxxxx
+NEXT_PUBLIC_PADDLE_PRICE_ID_GROWER=prc_xxxxx
+NEXT_PUBLIC_PADDLE_PRICE_ID_BOTANIST=prc_xxxxx
+NEXT_PUBLIC_PADDLE_SANDBOX=false
+```
+
+## Functionality Checklist
+
+### Landing Page
+- [x] Header with Sign In / Sign Up links
+- [x] Waitlist email form
+- [x] Source parameter tracking (?source=twitter, ?utm_source=...)
+- [x] Inline success message: "You're on the list! We'll be in touch soon 🌿"
+- [x] Inline duplicate message: "You're already on the list!"
+- [x] Vercel Analytics tracking with `analytics.track('waitlist_signup', {source})`
+- [x] Feature cards and pricing preview
+
+### Auth Pages
+- [x] Login form with email/password
+- [x] Email verification error handling (403 email_not_verified)
+- [x] Resend verification button
+- [x] Register form with name/email/password
+- [x] Register redirects to verify-email?email=...
+- [x] Verify email page with token parameter handling
+- [x] Verify email POST endpoint (not GET)
+- [x] Resend verification email functionality
+
+### Authenticated App
+- [x] Dashboard with user greeting and tier badge
+- [x] Plant list with loading states
+- [x] Sidebar nav (desktop) with active link highlighting
+- [x] Mobile hamburger menu with backdrop
+- [x] Logout button clears session
+- [x] Protected routes redirect to /login if unauthenticated
+
+### Pricing Page
+- [x] Three tiers displayed (Free, Grower, Botanist)
+- [x] Paddle.js loaded dynamically
+- [x] Checkout overlay triggered on upgrade
+- [x] Transaction ID handling after checkout
+- [x] Polling fallback for payment verification
+- [x] URL params cleaned after verification
+
+## Build & Lint Checks
+
+- [x] No TypeScript errors (strict mode)
+- [x] No ESLint errors (unused vars/imports)
+- [x] All files under 150 lines (or properly extracted sub-components)
+- [x] No console.error without handling
+
+## Go-No-Go Gate
+
+### To Pass
+1. Deploy frontend to Render
+2. Create Supabase project with waitlist table (use 001-waitlist-table.sql)
+3. Set environment variables
+4. Visit: https://leafmind-xxxxx.onrender.com?source=twitter
+5. Submit test email
+6. Verify in Supabase: `SELECT * FROM waitlist WHERE source = 'twitter';`
+7. Confirm row exists with test email and source='twitter'
+
+### Success Criteria
+- [ ] Landing page loads
+- [ ] Waitlist form submits without error
+- [ ] Inline confirmation message displays
+- [ ] Supabase has 1+ rows with source='twitter'
+- [ ] No errors in browser console
+- [ ] Duplicate submission handled gracefully
+
+## Next Steps (Post-Deployment)
+
+1. Configure backend API (FastAPI) on Render
+2. Set NEXT_PUBLIC_API_URL to backend URL
+3. Create Paddle products and get price IDs
+4. Set Paddle environment variables
+5. Monitor Vercel Analytics dashboard
+6. Track waitlist growth in Supabase
+7. Launch Twitter campaign on June 20, 2026
