@@ -3,28 +3,29 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authApi } from "@/app/_lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authApi } from "@/app/_lib/api";
 
-export default function RegisterPage() {
-  const router = useRouter();
+export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      await authApi.register(email, password);
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      const data = await authApi.register(email, password, name);
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -33,21 +34,26 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white p-4">
-      <Card className="w-full max-w-md border-gray-200">
+    <div className="flex items-center justify-center min-h-screen bg-white p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Join LeafMind and get AI plant care advice</CardDescription>
+          <CardTitle>Create Account</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
+          <form onSubmit={handleRegister} className="space-y-4">
+            {error && <Alert className="bg-red-50 border-red-200"><AlertDescription className="text-red-800">{error}</AlertDescription></Alert>}
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -58,8 +64,7 @@ export default function RegisterPage() {
                 required
               />
             </div>
-
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -70,18 +75,16 @@ export default function RegisterPage() {
                 required
               />
             </div>
-
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm">
+          <p className="text-center text-sm text-gray-600 mt-4">
             Already have an account?{" "}
-            <Link href="/login" className="text-green-600 hover:underline font-medium">
-              Sign in
+            <Link href="/login" className="text-blue-600 hover:underline">
+              Sign In
             </Link>
-          </div>
+          </p>
         </CardContent>
       </Card>
     </div>

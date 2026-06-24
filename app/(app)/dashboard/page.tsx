@@ -1,73 +1,58 @@
-'use client';
+"use client";
 
-import {useEffect, useState} from 'react';
-import {useAuth} from '@/_lib/hooks';
-import {plantsApi} from '@/_lib/api';
-import {Plant} from '@/_lib/types';
-import {Card, CardHeader, CardTitle, CardContent} from '@/components/ui/card';
-import {Badge} from '@/components/ui/badge';
-import {Leaf} from 'lucide-react';
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-export default function DashboardPage() {
-  const {user} = useAuth();
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [loading, setLoading] = useState(true);
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const checkoutSuccess = searchParams.get("checkout") === "success";
+  const [isProcessing, setIsProcessing] = useState(checkoutSuccess);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await plantsApi.list();
-        setPlants(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  const tierColors = {free: 'bg-gray-100 text-gray-800', grower: 'bg-blue-100 text-blue-800', botanist: 'bg-purple-100 text-purple-800'};
+    if (checkoutSuccess && isProcessing) {
+      const timer = setTimeout(() => setIsProcessing(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [checkoutSuccess, isProcessing]);
 
   return (
     <div className="mx-auto max-w-5xl p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {user?.display_name}!</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-gray-600">Plan:</span>
-          <Badge className={tierColors[user?.tier as keyof typeof tierColors] || ''}>
-            {user?.tier.charAt(0).toUpperCase() + user?.tier.slice(1)}
-          </Badge>
-        </div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+      {isProcessing && checkoutSuccess && (
+        <Card className="mb-6 border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <p className="text-green-800">Payment processing... please wait</p>
+          </CardContent>
+        </Card>
+      )}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome to LeafMind</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">Start exploring LeafMind features.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Plan Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge>Free Plan</Badge>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Leaf className="w-5 h-5" />
-            Your Plants
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div>Loading...</div>
-          ) : plants.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No plants yet. Upgrade to start tracking!</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {plants.map((plant) => (
-                <div key={plant.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                  <h3 className="font-semibold text-gray-900">{plant.name}</h3>
-                  <p className="text-sm text-gray-600">{plant.species}</p>
-                  {plant.notes && <p className="text-sm text-gray-600 mt-1">{plant.notes}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

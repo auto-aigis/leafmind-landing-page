@@ -1,34 +1,61 @@
-'use client';
+"use client";
 
-import {createContext, ReactNode, useCallback, useEffect, useState} from 'react';
-import {User} from '@/_lib/types';
-import {authApi} from '@/_lib/api';
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { authApi } from "@/app/_lib/api";
 
-export const AuthContext = createContext<{user: User | null; loading: boolean; refresh: () => Promise<void>; logout: () => Promise<void>} | null>(null);
+interface User {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
 
-export function AuthProvider({children}: {children: ReactNode}) {
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  refresh: () => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const refresh = useCallback(async () => {
+  const refresh = async () => {
     try {
-      const u = await authApi.me();
-      setUser(u);
+      const res = await authApi.me();
+      setUser(res.user);
     } catch {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  };
 
-  const logout = useCallback(async () => {
-    await authApi.logout();
-    setUser(null);
-  }, []);
+  const logout = async () => {
+    try {
+      await authApi.logout();
+      setUser(null);
+      router.push("/login");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refresh().finally(() => setLoading(false));
+  }, []);
 
-  return <AuthContext.Provider value={{user, loading, refresh, logout}}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, refresh, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth outside AuthProvider");
+  return ctx;
 }

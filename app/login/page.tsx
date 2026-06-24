@@ -3,24 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authApi } from "@/app/_lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authApi } from "@/app/_lib/api";
+import { useAuth } from "@/app/_components/AuthProvider";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [unverified, setUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
+  const [unverified, setUnverified] = useState(false);
   const [resendSent, setResendSent] = useState(false);
+  const router = useRouter();
+  const { refresh } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setUnverified(false);
@@ -28,13 +29,14 @@ export default function LoginPage() {
 
     try {
       await authApi.login(email, password);
+      await refresh();
       router.push("/dashboard");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
-      if (message.includes("email_not_verified")) {
+      const msg = err instanceof Error ? err.message : "Login failed";
+      if (msg.includes("email_not_verified") || msg.includes("not verified")) {
         setUnverified(true);
       } else {
-        setError(message);
+        setError(msg);
       }
     } finally {
       setLoading(false);
@@ -42,7 +44,7 @@ export default function LoginPage() {
   };
 
   const handleResendVerification = async () => {
-    setResendLoading(true);
+    setLoading(true);
     try {
       await authApi.resendVerification(email);
       setResendSent(true);
@@ -50,40 +52,27 @@ export default function LoginPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend");
     } finally {
-      setResendLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white p-4">
-      <Card className="w-full max-w-md border-gray-200">
+    <div className="flex items-center justify-center min-h-screen bg-white p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-          <CardDescription>Enter your email and password</CardDescription>
+          <CardTitle>Sign In</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && <Alert className="bg-red-50 border-red-200"><AlertDescription className="text-red-800">{error}</AlertDescription></Alert>}
             {unverified && (
-              <Alert className="border-yellow-200 bg-yellow-50">
+              <Alert className="bg-yellow-50 border-yellow-200">
                 <AlertDescription className="text-yellow-800">
-                  Please verify your email first
+                  Please verify your email. {resendSent ? "Email sent! Check your inbox." : ""}
                 </AlertDescription>
               </Alert>
             )}
-            {resendSent && (
-              <Alert className="border-green-200 bg-green-50">
-                <AlertDescription className="text-green-800">
-                  Verification email sent!
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -94,8 +83,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -106,32 +94,26 @@ export default function LoginPage() {
                 required
               />
             </div>
-
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          {unverified && (
-            <div className="mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleResendVerification}
-                disabled={resendLoading}
-              >
-                {resendLoading ? "Sending..." : "Resend Verification Email"}
-              </Button>
-            </div>
+          {unverified && !resendSent && (
+            <Button
+              variant="outline"
+              onClick={handleResendVerification}
+              className="w-full mt-3"
+              disabled={loading}
+            >
+              Resend Verification Email
+            </Button>
           )}
-
-          <div className="mt-6 text-center text-sm">
+          <p className="text-center text-sm text-gray-600 mt-4">
             Don't have an account?{" "}
-            <Link href="/register" className="text-green-600 hover:underline font-medium">
-              Sign up
+            <Link href="/register" className="text-blue-600 hover:underline">
+              Sign Up
             </Link>
-          </div>
+          </p>
         </CardContent>
       </Card>
     </div>
