@@ -1,0 +1,1 @@
+// Re-export useAuth from AuthProvider for convenience\nexport { useAuth } from './app/_components/AuthProvider';\n
